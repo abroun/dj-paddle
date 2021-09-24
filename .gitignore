@@ -71,3 +71,4 @@ docs/djpaddle.*.rst
 
 # Development task artifacts
 default.db
+*.sqlite3
