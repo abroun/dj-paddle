@@ -42,6 +42,13 @@ DJPADDLE_SUBSCRIPTIONS_BY_SUBSCRIBER = getattr(
     "djpaddle.mappers.subscriptions_by_subscriber",
 )
 
+DJPADDLE_WEBHOOK_RETENTION_DAYS = getattr(
+    settings, "DJPADDLE_WEBHOOK_RETENTION_DAYS", 0
+)
+
+DJPADDLE_REPLAYED_EVENT_RETENTION_DAYS = getattr(
+    settings, "DJPADDLE_REPLAYED_EVENT_RETENTION_DAYS", 7
+)
 
 def get_subscriber_model():
     """

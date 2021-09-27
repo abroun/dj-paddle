@@ -247,21 +247,40 @@ if settings.DJPADDLE_LINK_STALE_SUBSCRIPTIONS:
             queryset.update(subscriber=instance)
 
 
+def convert_string_to_datetime(datetime_str):
+
+    result = datetime_str
+
+    try:
+        result = datetime.strptime(result, PADDLE_DATETIME_FORMAT)
+    except ValueError:
+        # Some fields such as next_bill_date should perhaps be
+        # a DateField not DatetimeField
+        result = datetime.strptime(result, PADDLE_DATE_FORMAT)
+
+    if djsettings.USE_TZ:
+        local_time_zone = timezone.get_default_timezone()
+        result = timezone.make_aware(result, local_time_zone)
+
+    return result
+
 def convert_datetime_strings_to_datetimes(data, model):
     datetime_fields = [field.name for field in model._meta.get_fields() if isinstance(field, models.DateTimeField)]
     for field in datetime_fields:
         if field not in data:
             continue
 
-        try:
-            data[field] = datetime.strptime(data[field], PADDLE_DATETIME_FORMAT)
-        except ValueError:
-            # Some fields such as next_bill_date should perhaps be
-            # a DateField not DatetimeField
-            data[field] = datetime.strptime(data[field], PADDLE_DATE_FORMAT)
-
-        if djsettings.USE_TZ:
-            local_time_zone = timezone.get_default_timezone()
-            data[field] = timezone.make_aware(data[field], local_time_zone)
+        data[field] = convert_string_to_datetime(data[field])
 
     return data
+
+# Table to keep track of received webhooks. Retention period is configurable
+class WebhookEvent(models.Model):
+    time = models.DateTimeField()
+    payload = models.JSONField()
+
+# For people paranoid about missing webhooks it's possible to setup polling to periodically
+# grab all sent events.
+class ReplayedEvent(models.Model):
+    time = models.DateTimeField()
+    payload = models.JSONField()

@@ -1,4 +1,5 @@
 from django.contrib import admin
+import json
 
 from . import models
 
@@ -30,3 +31,15 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "status",
         "plan",
     )
+
+@admin.register(models.WebhookEvent)
+class WebhookEventAdmin(admin.ModelAdmin):
+    list_display = ("time", "alert_name")
+
+    def alert_name(self, instance):
+        return instance.payload.get("alert_name")
+
+
+@admin.register(models.ReplayedEvent)
+class ReplayedEventAdmin(WebhookEventAdmin):
+    pass

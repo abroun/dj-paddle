@@ -5,9 +5,11 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from django.views.generic.edit import BaseCreateView
+from datetime import datetime, timezone, timedelta
 
-from . import signals
-from .models import Checkout, convert_datetime_strings_to_datetimes
+from . import signals, settings
+from .models import Checkout, convert_datetime_strings_to_datetimes, \
+    convert_string_to_datetime, WebhookEvent
 from .utils import is_valid_webhook
 
 
@@ -54,6 +56,21 @@ class PaddleWebhookView(View):
             return HttpResponseBadRequest("'alert_name' missing")
 
         if alert_name in self.SUPPORTED_WEBHOOKS:
+
+            # Store the webhook if needed
+            if settings.DJPADDLE_WEBHOOK_RETENTION_DAYS > 0:
+
+                event_time = payload.get("event_time")
+                if not event_time:
+                    return HttpResponseBadRequest("'event_time' missing")
+
+                # Clean out old events
+                oldest_event_time = datetime.now(timezone.utc) - timedelta(days=settings.DJPADDLE_WEBHOOK_RETENTION_DAYS)
+                WebhookEvent.objects.filter(time__lt=oldest_event_time).delete()
+
+                event = WebhookEvent(time=convert_string_to_datetime(event_time), payload=payload)
+                event.save()
+
             signal = getattr(signals, alert_name)
             if signal:  # pragma: no cover
                 signal.send(sender=self.__class__, payload=payload)
