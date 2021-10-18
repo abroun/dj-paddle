@@ -255,6 +255,46 @@ if settings.DJPADDLE_LINK_STALE_SUBSCRIPTIONS:
             queryset = mappers.get_subscriptions_by_subscriber(instance, queryset)
             queryset.update(subscriber=instance)
 
+class Product(PaddleBaseModel):
+    """
+    'Product' represents a Paddle product that can be bought with a one time purchase
+    """
+
+    name = models.CharField(max_length=255)
+    description = models.CharField(max_length=1024, null=True)
+
+    base_price = models.FloatField()
+    sale_price = models.FloatField(null=True)
+    currency = PaddleCurrencyCodeField()
+    icon = models.CharField(max_length=1024, null=True)
+
+    @classmethod
+    def api_list(cls):
+        return paddle_client.list_products()["products"]
+
+    @classmethod
+    def api_get(cls, product_id):
+        # Paddle API doesn't let you filter by product id so we need to
+        # get all products and filter ourselves
+        products = cls.api_list()
+        return next((p for p in products if p["id"] == product_id), None)
+
+    @classmethod
+    def sync_from_paddle_data(cls, data):
+        pk = data.pop("id")
+
+        # Currently 'screenshots' is empty in the Paddle API doc samples, and
+        # there doesn't seem to be a way to set screenshots in the Paddle 
+        # dashboard, so we ignore it for now
+        _ = data.pop("screenshots")
+
+        product, __ = cls.objects.get_or_create(pk=pk, defaults=data)
+
+        return product
+
+    def __str__(self):
+        return "{}:{}".format(self.name, self.id)
+
 def convert_string_to_datetime(datetime_str):
 
     result = datetime_str

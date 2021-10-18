@@ -32,6 +32,16 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "plan",
     )
 
+@admin.register(models.Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "name",
+        "base_price",
+        "sale_price",
+        "currency"
+    )
+
 @admin.register(models.WebhookEvent)
 class WebhookEventAdmin(admin.ModelAdmin):
     list_display = ("time", "alert_name")
