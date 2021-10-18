@@ -42,6 +42,11 @@ DJPADDLE_SUBSCRIPTIONS_BY_SUBSCRIBER = getattr(
     "djpaddle.mappers.subscriptions_by_subscriber",
 )
 
+DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK = getattr(
+    settings, 
+    "DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK", 
+    "djpaddle.mappers.subscription_webhook_callback")
+
 DJPADDLE_WEBHOOK_RETENTION_DAYS = getattr(
     settings, "DJPADDLE_WEBHOOK_RETENTION_DAYS", 0
 )

@@ -204,13 +204,22 @@ class Subscription(PaddleBaseModel):
     def create_or_update_by_payload(cls, payload):
         data = cls._sanitize_webhook_payload(payload)
         pk = data.get("id")
+        alert_name = payload.get("alert_name")
         try:
             subscription = cls.objects.get(pk=pk)
         except cls.DoesNotExist:
-            return cls.objects.create(pk=pk, **data)
+            subscription = cls.objects.create(pk=pk, **data)
+            mappers.process_subscription_webhook_callback(alert_name, subscription.id)
+            return subscription
 
+        # NOTE: Some webhook events can come through with the same time (e.g. subscription_created
+        # and subscription_payment_succeeded, so depending on ordering the < check below may
+        # cause some data to be missed. One option is to change the check to be <= which may cause
+        # oddness during event replays. The other option is to configure Paddle to only send
+        # subscription_created events and not subscription_payment_succeeded events.
         if subscription.event_time < data["event_time"]:
             cls.objects.filter(pk=pk).update(**data)
+            mappers.process_subscription_webhook_callback(alert_name, subscription.id)
 
     def __str__(self):
         return "{}:{}".format(self.subscriber, self.id)
@@ -245,7 +254,6 @@ if settings.DJPADDLE_LINK_STALE_SUBSCRIPTIONS:
             queryset = Subscription.objects.filter(subscriber=None)
             queryset = mappers.get_subscriptions_by_subscriber(instance, queryset)
             queryset.update(subscriber=instance)
-
 
 def convert_string_to_datetime(datetime_str):
 

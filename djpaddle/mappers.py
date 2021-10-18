@@ -40,6 +40,13 @@ def subscriptions_by_subscriber(subscriber, queryset):
     """
     return queryset.filter(email__iexact=subscriber.email)
 
+def subscription_webhook_callback(alert_name, subscription_id):
+    """
+    Get passed the name and subscription_id for a processed subscription webhook. By default this
+    is just a do nothing sink, but you can overwrite this function via
+    settings.DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK.
+    """
+    pass
 
 def get_subscriber_by_payload(Subscriber, payload):
     """
@@ -53,3 +60,9 @@ def get_subscriptions_by_subscriber(subscriber, queryset):
     wrapper to retrieve and call the function referenced in settings.DJPADDLE_SUBSCRIPTIONS_BY_SUBSCRIBER
     """
     return _get_fn(settings.DJPADDLE_SUBSCRIPTIONS_BY_SUBSCRIBER)(subscriber=subscriber, queryset=queryset)
+
+def process_subscription_webhook_callback(alert_name, subscription_id):
+    """
+    wrapper to retrieve and call the function referenced in settings.DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK
+    """
+    return _get_fn(settings.DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK)(alert_name=alert_name, subscription_id=subscription_id)
