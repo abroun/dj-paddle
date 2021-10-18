@@ -24,11 +24,21 @@ function checkoutComplete(data) {
     xhr.setRequestHeader("X-CSRFToken", csrftoken);
     xhr.onreadystatechange = function(){
         if (xhr.readyState === XMLHttpRequest.DONE) {
+
+            let reloadCurPage = false
             if (xhr.status === 200) {
                 var jsonResponse = JSON.parse(xhr.responseText);
                 if (jsonResponse.hasOwnProperty("redirect_url")) {
                     window.location.href = jsonResponse["redirect_url"];
+                } else { 
+                    reloadCurPage = true
                 }
+            } else {
+                reloadCurPage = true
+            }
+
+            if (reloadCurPage) {
+                window.location.reload()
             }
         }
     }

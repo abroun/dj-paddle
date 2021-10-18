@@ -77,7 +77,6 @@ class PaddleWebhookView(View):
 
         return HttpResponse()
 
-
 class PaddlePostCheckoutApiView(BaseCreateView):
     http_method_names = ["post"]
 
@@ -92,6 +91,13 @@ class PaddlePostCheckoutApiView(BaseCreateView):
         except (KeyError, ValueError):
             return HttpResponseBadRequest('Missing "completed"')
 
+        # Beholder Vision specific validation
+        email = data.get("email")
+        passthrough = data.get("passthrough")
+
+        if email != request.user.email or passthrough != request.user.username:
+            return HttpResponseBadRequest("Checkout not from current user")
+
         try:
             data = convert_datetime_strings_to_datetimes(data, Checkout)
         except ValueError as e:
@@ -104,7 +110,7 @@ class PaddlePostCheckoutApiView(BaseCreateView):
             next_url = "{0}?checkout={1}".format(next_url, pk)
             return JsonResponse({"redirect_url": next_url}, status=200)
 
-        if redirect_url:
+        if redirect_url and redirect_url != "null":
             redirect_url = "{0}?checkout={1}".format(redirect_url, pk)
             return JsonResponse({"redirect_url": redirect_url}, status=200)
 
