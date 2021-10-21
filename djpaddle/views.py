@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from django.views.generic.edit import BaseCreateView
 from datetime import datetime, timezone, timedelta
+from django.contrib.auth.models import AnonymousUser
 
 from . import signals, settings
 from .models import Checkout, convert_datetime_strings_to_datetimes, \
@@ -91,12 +92,13 @@ class PaddlePostCheckoutApiView(BaseCreateView):
         except (KeyError, ValueError):
             return HttpResponseBadRequest('Missing "completed"')
 
-        # Beholder Vision specific validation
-        email = data.get("email")
-        passthrough = data.get("passthrough")
+        if request.user.is_authenticated:
+            # Beholder Vision specific validation
+            email = data.get("email")
+            passthrough = data.get("passthrough")
 
-        if email != request.user.email or passthrough != request.user.username:
-            return HttpResponseBadRequest("Checkout not from current user")
+            if email != request.user.email or passthrough != request.user.username:
+                return HttpResponseBadRequest("Checkout not from current user")
 
         try:
             data = convert_datetime_strings_to_datetimes(data, Checkout)
