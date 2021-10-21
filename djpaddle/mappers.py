@@ -48,6 +48,14 @@ def subscription_webhook_callback(alert_name, subscription_id):
     """
     pass
 
+def product_purchase_webhook_callback(alert_name, product_purchase_id):
+    """
+    Get passed the name and product_purchase_id for a processed product purchase webhook. By default this
+    is just a do nothing sink, but you can overwrite this function via
+    settings.DJPADDLE_PRODUCT_PURCHASE_WEBHOOK_CALLBACK.
+    """
+    pass
+
 def get_subscriber_by_payload(Subscriber, payload):
     """
     wrapper to retrieve and call the function referenced in settings.DJPADDLE_SUBSCRIBER_BY_PAYLOAD
@@ -66,3 +74,9 @@ def process_subscription_webhook_callback(alert_name, subscription_id):
     wrapper to retrieve and call the function referenced in settings.DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK
     """
     return _get_fn(settings.DJPADDLE_SUBSCRIPTION_WEBHOOK_CALLBACK)(alert_name=alert_name, subscription_id=subscription_id)
+
+def process_product_purchase_webhook_callback(alert_name, product_purchase_id):
+    """
+    wrapper to retrieve and call the function referenced in settings.DJPADDLE_PRODUCT_PURCHASE_WEBHOOK_CALLBACK
+    """
+    return _get_fn(settings.DJPADDLE_PRODUCT_PURCHASE_WEBHOOK_CALLBACK)(alert_name=alert_name, product_purchase_id=product_purchase_id)

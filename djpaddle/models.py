@@ -295,6 +295,93 @@ class Product(PaddleBaseModel):
     def __str__(self):
         return "{}:{}".format(self.name, self.id)
 
+class ProductPurchase(PaddleBaseModel):
+    """
+    'ProductPurchase' represents a purchase of a Paddle product.
+
+    They are automatically created in response to the webhook calls 'locker_processed'
+    """
+
+    id = models.CharField(max_length=64, primary_key=True)  # Order id
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+
+    subscriber = models.ForeignKey(
+        settings.DJPADDLE_SUBSCRIBER_MODEL,
+        related_name="product_purchases",
+        null=True,
+        default=None,
+        on_delete=models.CASCADE,
+    )
+
+    event_time = models.DateTimeField()
+    email = models.EmailField()
+    quantity = models.IntegerField()
+    checkout_id = models.CharField(max_length=64)
+    marketing_consent = models.BooleanField()
+    
+    source = models.URLField()
+    
+    class Meta:
+        ordering = ["created_at"]
+
+    @classmethod
+    def _sanitize_webhook_payload(cls, payload):
+        data = {}
+        data["id"] = payload.pop("order_id")
+
+        Subscriber = settings.get_subscriber_model()
+        try:
+            data["subscriber"] = mappers.get_subscriber_by_payload(Subscriber, payload)
+        except Subscriber.DoesNotExist:
+            warning = "Subscriber could not be found for product purchase {0} with payload {1}. Subscriber left empty."
+            log.warning(warning.format(data["id"], payload))
+            data["subscriber"] = None
+
+        # transform `product_id` to plan ref
+        product_id = payload.pop("product_id")
+        try:
+            data["product"] = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            product_data = Product.api_get(product_id=product_id)
+            data["product"] = Product.sync_from_paddle_data(product_data)
+
+        # sanitize fields
+        valid_field_names = [field.name for field in cls._meta.get_fields()]
+        for key, value in payload.items():
+            # e.g. 'new_status' --> 'status'
+            if key.startswith("new_"):
+                key = key[4:]
+
+            if key in valid_field_names:
+                data[key] = value
+
+        data = convert_datetime_strings_to_datetimes(data, cls)
+
+        return data
+
+    @classmethod
+    def create_or_update_by_payload(cls, payload):
+        data = cls._sanitize_webhook_payload(payload)
+        pk = data.get("id")
+        alert_name = payload.get("alert_name")
+        try:
+            product_purchase = cls.objects.get(pk=pk)
+        except cls.DoesNotExist:
+            product_purchase = cls.objects.create(pk=pk, **data)
+            mappers.process_product_purchase_webhook_callback(alert_name, product_purchase.id)
+            return product_purchase
+
+        if product_purchase.event_time < data["event_time"]:
+            cls.objects.filter(pk=pk).update(**data)
+            mappers.process_product_purchase_webhook_callback(alert_name, product_purchase.id)
+
+    def __str__(self):
+        return "{}:{}".format(self.subscriber, self.id)
+
+@receiver(signals.locker_processed)
+def product_purchase_event(sender, payload, *args, **kwargs):
+    ProductPurchase.create_or_update_by_payload(payload)
+
 def convert_string_to_datetime(datetime_str):
 
     result = datetime_str

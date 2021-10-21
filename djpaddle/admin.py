@@ -42,6 +42,18 @@ class ProductAdmin(admin.ModelAdmin):
         "currency"
     )
 
+@admin.register(models.ProductPurchase)
+class ProductPurchaseAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "product",
+        "product_name",
+        "quantity"
+    )
+
+    def product_name(self, obj):
+        return obj.product.name
+
 @admin.register(models.WebhookEvent)
 class WebhookEventAdmin(admin.ModelAdmin):
     list_display = ("time", "alert_name")
